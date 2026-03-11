@@ -37,7 +37,35 @@ if 'selected_article' not in st.session_state:
 # 데이터 로드 함수
 @st.cache_data
 def load_data():
-    db_path = os.path.join(os.getcwd(), "nemostore.db")
+    # 현재 파일(app.py)의 위치를 기준으로 DB 경로를 찾습니다.
+    # 1. app.pyと同じ폴더에 있는 경우
+    # 2. app.py의 부모(루트) 폴더에 있는 경우를 모두 체크합니다.
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    root_dir = os.path.dirname(current_dir)
+    
+    paths_to_try = [
+        os.path.join(current_dir, "nemostore.db"),
+        os.path.join(root_dir, "nemostore.db"),
+        os.path.join(os.getcwd(), "nemostore.db")
+    ]
+    
+    db_path = None
+    for p in paths_to_try:
+        if os.path.exists(p):
+            # 파일이 존재하고 테이블이 있는지 확인 (단순 경로 존재만으로는 부족할 수 있음)
+            try:
+                temp_conn = sqlite3.connect(p)
+                temp_df = pd.read_sql("SELECT name FROM sqlite_master WHERE type='table' AND name='stores';", temp_conn)
+                temp_conn.close()
+                if not temp_df.empty:
+                    db_path = p
+                    break
+            except:
+                continue
+    
+    if db_path is None:
+        raise FileNotFoundError(f"nemostore.db 파일을 찾을 수 없거나 'stores' 테이블이 없습니다. 시도한 경로: {paths_to_try}")
+
     conn = sqlite3.connect(db_path)
     query = "SELECT * FROM stores"
     df = pd.read_sql(query, conn)
@@ -50,7 +78,7 @@ def load_data():
     # ㎡당 월세 계산
     df['pricePerArea'] = (df['monthlyRent'] / df['size']).round(2)
     
-    # 지하철역 이름만 추출 (예: "해운대역, 도보 4분" -> "해운대역")
+    # 지하철역 이름만 추출
     df['subwayStation'] = df['nearSubwayStation'].str.split(',').str[0].str.strip()
     
     return df

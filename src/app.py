@@ -46,7 +46,9 @@ def load_data():
     paths_to_try = [
         os.path.join(current_dir, "nemostore.db"),
         os.path.join(root_dir, "nemostore.db"),
-        os.path.join(os.getcwd(), "nemostore.db")
+        os.path.join(root_dir, "data", "nemostore.db"),  # data 폴더 추가
+        os.path.join(os.getcwd(), "nemostore.db"),
+        os.path.join(os.getcwd(), "data", "nemostore.db") # 현재 디렉토리의 data 폴더 추가
     ]
     
     db_path = None
